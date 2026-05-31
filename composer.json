@@ -1,0 +1,21 @@
+{
+    "name": "naldike/multiagent-platform",
+    "description": "Plataforma multiagente e IA de Naldike Store para hostings compartidos",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.0",
+        "firebase/php-jwt": "^6.8",
+        "smalot/pdfparser": "^2.10"
+    },
+    "config": {
+        "audit": {
+            "block-insecure": false
+        }
+    }
+}

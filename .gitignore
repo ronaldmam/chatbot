@@ -1,0 +1,17 @@
+# Config y credenciales sensibles (¡Importante!)
+config.php
+
+# Logs y depuración
+*.log
+fb_webhook_log.txt
+gemini_api_error.log
+gemini_error.log
+
+# Dependencias de PHP y Node
+vendor/
+node_modules/
+.angular/
+
+# Archivos del sistema u otros no necesarios
+.DS_Store
+Thumbs.db

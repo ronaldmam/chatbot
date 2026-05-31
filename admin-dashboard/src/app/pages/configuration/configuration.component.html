@@ -1,0 +1,181 @@
+<div class="config-wrapper animated-fade-in">
+  <header class="config-header">
+    <h1>Configuración del Sistema RAG</h1>
+    <p class="subtitle">Administra las fuentes de datos y sincronizaciones de stock de Naldike Store</p>
+  </header>
+
+  <!-- Banner Alerts -->
+  <div class="alert-success" *ngIf="successMessage">
+    <span>✅ {{ successMessage }}</span>
+  </div>
+  <div class="alert-error" *ngIf="errorMessage">
+    <span>⚠️ {{ errorMessage }}</span>
+  </div>
+
+  <div class="config-grid">
+    <!-- URL Ingestion Card -->
+    <section class="glass-card config-card">
+      <div class="card-header">
+        <span class="card-icon">🌐</span>
+        <h3>Rastreador de URL</h3>
+      </div>
+      <p class="card-desc">Ingresa un enlace de la tienda (ej: políticas de envíos) para que la IA extraiga su contenido.</p>
+      
+      <div class="form-group">
+        <label for="url">Dirección URL</label>
+        <div class="input-action-group">
+          <input 
+            type="url" 
+            id="url" 
+            [(ngModel)]="urlToIngest" 
+            placeholder="https://naldike.com/politica-ejemplo"
+            [disabled]="isIngestingUrl">
+          <button class="btn btn-primary" (click)="ingestUrl()" [disabled]="isIngestingUrl || !urlToIngest">
+            <span *ngIf="!isIngestingUrl">🔍 Rastrear</span>
+            <span *ngIf="isIngestingUrl" class="spinner"></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PDF Manual Ingestion Card -->
+    <section class="glass-card config-card">
+      <div class="card-header">
+        <span class="card-icon">📄</span>
+        <h3>Ingesta de PDFs / Manuales</h3>
+      </div>
+      <p class="card-desc">Sube manuales de garantías, políticas internas o catálogos en PDF.</p>
+      
+      <div class="form-group">
+        <label for="pdf-file">Seleccionar archivo PDF</label>
+        <div class="input-action-group">
+          <input 
+            type="file" 
+            id="pdf-file" 
+            accept=".pdf" 
+            (change)="onFileSelected($event)"
+            [disabled]="isIngestingPdf">
+          <button class="btn btn-primary" (click)="ingestPdf()" [disabled]="isIngestingPdf || !selectedFile">
+            <span *ngIf="!isIngestingPdf">📤 Ingerir</span>
+            <span *ngIf="isIngestingPdf" class="spinner"></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- WooCommerce WooCommerce API Integration Card -->
+    <section class="glass-card config-card full-width">
+      <div class="card-header">
+        <span class="card-icon">🛒</span>
+        <h3>Sincronización WooCommerce</h3>
+      </div>
+      <p class="card-desc">Fuerza la sincronización en tiempo real de inventarios, stock y precios desde la REST API hacia la base de datos local.</p>
+      
+      <button class="btn btn-primary sync-btn" (click)="syncWooCommerce()" [disabled]="isSyncingWc">
+        <span *ngIf="!isSyncingWc">🔄 Sincronizar WooCommerce API</span>
+        <span *ngIf="isSyncingWc" class="spinner"></span>
+      </button>
+    </section>
+
+    <!-- Options Bot Configuration Card -->
+    <section class="glass-card config-card full-width bot-config-card">
+      <div class="card-header">
+        <span class="card-icon">🤖</span>
+        <h3>Personalización del Bot de Opciones</h3>
+      </div>
+      <p class="card-desc">Edita de forma visual los textos que tus clientes reciben en Messenger, WhatsApp y TikTok cuando la automatización inicial (Bot de Opciones) los atiende.</p>
+      
+      <form (ngSubmit)="saveBotSettings()" class="bot-settings-form">
+        <div class="form-group">
+          <label for="welcome-message">Mensaje de Bienvenida (Menú Inicial)</label>
+          <textarea 
+            id="welcome-message" 
+            name="welcomeMessage" 
+            [(ngModel)]="welcomeMessage" 
+            rows="4" 
+            placeholder="Escribe el saludo y el menú inicial del bot..." 
+            required></textarea>
+          <span class="input-tip">💡 Tip: Diseña tu menú indicando las opciones del 1 al 3. Recuerda que la opción 3 activa el Asistente de IA de Gemini.</span>
+        </div>
+
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="option1-response">Respuesta de la Opción 1 (Catálogo / Stock)</label>
+            <textarea 
+              id="option1-response" 
+              name="option1Response" 
+              [(ngModel)]="option1Response" 
+              rows="3" 
+              placeholder="Texto de respuesta cuando seleccionan la opción 1..." 
+              required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="option2-response">Respuesta de la Opción 2 (Ver Pedidos)</label>
+            <textarea 
+              id="option2-response" 
+              name="option2Response" 
+              [(ngModel)]="option2Response" 
+              rows="3" 
+              placeholder="Texto de respuesta cuando seleccionan la opción 2..." 
+              required></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary save-bot-btn" [disabled]="isSavingBot">
+          <span *ngIf="!isSavingBot">💾 Guardar Respuestas del Bot</span>
+          <span *ngIf="isSavingBot" class="spinner"></span>
+        </button>
+      </form>
+    </section>
+  </div>
+
+  <!-- Ingested items audit table -->
+  <div class="knowledge-table-section animated-fade-in">
+    <div class="glass-card table-card">
+      <h3>Fuentes de Conocimiento Indexadas</h3>
+      
+      <div class="table-container">
+        <table class="knowledge-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tipo</th>
+              <th>Título / Recurso</th>
+              <th>Origen / URL</th>
+              <th>Fecha Ingesta</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="isLoadingItems">
+              <td colspan="6" class="table-placeholder">
+                <span class="spinner"></span>
+                <p>Cargando recursos...</p>
+              </td>
+            </tr>
+            <tr *ngIf="!isLoadingItems && ingestedItems.length === 0">
+              <td colspan="6" class="table-placeholder">
+                <p>No hay fuentes de datos indexadas actualmente.</p>
+              </td>
+            </tr>
+            <tr *ngFor="let item of ingestedItems">
+              <td>{{ item.id }}</td>
+              <td>
+                <span class="badge" [ngClass]="'badge-' + item.type">
+                  {{ item.type === 'pdf' ? 'PDF' : (item.type === 'url' ? 'Página Web' : 'WooCommerce') }}
+                </span>
+              </td>
+              <td class="font-bold">{{ item.title }}</td>
+              <td class="text-muted text-truncate">{{ item.source_url }}</td>
+              <td>{{ item.created_at }}</td>
+              <td>
+                <button class="btn-delete" (click)="deleteItem(item.id)">🗑️ Eliminar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

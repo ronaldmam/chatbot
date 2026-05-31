@@ -1,0 +1,236 @@
+.config-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  width: 100%;
+}
+
+.config-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.config-header .subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* Alert banners with glows */
+.alert-success, .alert-error {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
+}
+
+.alert-success {
+  background: rgba(142, 255, 142, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(142, 255, 142, 0.2);
+}
+
+.alert-error {
+  background: rgba(255, 80, 80, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.config-card {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.config-card.full-width {
+  grid-column: 1 / -1;
+  align-items: flex-start;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-icon {
+  font-size: 1.6rem;
+}
+
+.card-header h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.card-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.input-action-group {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.input-action-group input {
+  flex: 1;
+}
+
+.sync-btn {
+  padding: 14px 28px;
+  font-size: 1rem;
+}
+
+/* Knowledge index Table */
+.knowledge-table-section {
+  width: 100%;
+}
+
+.table-card h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.knowledge-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.knowledge-table th, .knowledge-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.knowledge-table th {
+  background: rgba(15, 23, 42, 0.4);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.knowledge-table tr:hover td {
+  background: rgba(255,255,255,0.01);
+}
+
+.knowledge-table tr:last-child td {
+  border-bottom: none;
+}
+
+.font-bold {
+  font-weight: 600;
+}
+
+.text-truncate {
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table-placeholder {
+  text-align: center;
+  padding: 40px 0 !important;
+  color: var(--text-muted);
+}
+
+.table-placeholder .spinner {
+  margin-bottom: 10px;
+  display: inline-block;
+}
+
+.btn-delete {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.btn-delete:hover {
+  background: rgba(255, 80, 80, 0.1);
+}
+
+/* Spinner inline styles */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s infinite linear;
+}
+
+/* Options Bot Config form cards */
+.bot-config-card {
+  margin-top: 10px;
+}
+
+.bot-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.form-group-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.bot-settings-form textarea {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.92rem;
+  resize: vertical;
+  transition: var(--transition);
+}
+
+.bot-settings-form textarea:focus {
+  border-color: var(--border-active);
+  outline: none;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.input-tip {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.save-bot-btn {
+  align-self: flex-start;
+  padding: 12px 24px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

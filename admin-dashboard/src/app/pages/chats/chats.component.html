@@ -1,0 +1,131 @@
+<div class="chats-wrapper animated-fade-in">
+  <div class="chats-layout glass-card">
+    
+    <!-- Left Pane: Conversations List -->
+    <aside class="chats-sidebar">
+      <div class="chats-sidebar-header">
+        <h3>Conversaciones</h3>
+      </div>
+      
+      <div class="chats-list">
+        <div 
+          class="chat-item" 
+          *ngFor="let conv of conversations" 
+          [class.active]="selectedConversation?.id === conv.id"
+          (click)="selectConversation(conv)">
+          
+          <div class="chat-item-header">
+            <span class="platform-badge" [ngClass]="'platform-' + conv.platform">
+              <span [ngSwitch]="conv.platform">
+                <span *ngSwitchCase="'whatsapp'">💬 WhatsApp</span>
+                <span *ngSwitchCase="'messenger'">👥 Messenger</span>
+                <span *ngSwitchCase="'tiktok'">🎵 TikTok</span>
+                <span *ngSwitchDefault>🌐 Web</span>
+              </span>
+            </span>
+            <span class="marketplace-badge" *ngIf="conv.is_marketplace === 1">
+              🛍️ Marketplace
+            </span>
+            <span class="customer-name">{{ conv.customer_name }}</span>
+            <!-- Unread badge (pulsing blue dot) -->
+            <span class="unread-badge" *ngIf="conv.unread_count && conv.unread_count > 0 && selectedConversation?.id !== conv.id">
+              {{ conv.unread_count }}
+            </span>
+          </div>
+          
+          <div class="chat-item-footer">
+            <span class="psid">{{ conv.psid }}</span>
+            <span class="badge" [ngClass]="'badge-' + conv.flow_state">
+              {{ conv.flow_state === 'bot' ? 'Bot' : (conv.flow_state === 'ia' ? 'Asistente IA' : 'Gestor') }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right Pane: Active Thread History -->
+    <main class="chat-viewport">
+      <div class="viewport-placeholder" *ngIf="!selectedConversation">
+        <span class="placeholder-icon">💬</span>
+        <p>Selecciona una conversación para auditar el hilo de chat.</p>
+      </div>
+
+      <div class="viewport-container" *ngIf="selectedConversation">
+        <!-- Viewport Header -->
+        <header class="viewport-header">
+          <div class="client-meta">
+            <h2>{{ selectedConversation.customer_name }}</h2>
+            <span class="client-sub">
+              {{ selectedConversation.psid }} | Canal: {{ selectedConversation.platform | uppercase }}
+              <span *ngIf="selectedConversation.is_marketplace === 1" class="text-marketplace">
+                (Marketplace)
+              </span>
+            </span>
+            <div *ngIf="selectedConversation.is_marketplace === 1 && selectedConversation.marketplace_ref" class="marketplace-item-details">
+              🏷️ <strong>Artículo de interés:</strong> {{ selectedConversation.marketplace_ref }}
+            </div>
+          </div>
+          
+          <div class="state-control">
+            <label for="flow-state">Estado del Flujo:</label>
+            <select 
+              id="flow-state" 
+              name="flowState" 
+              [ngModel]="selectedConversation.flow_state" 
+              (ngModelChange)="changeFlowState($event)">
+              <option value="bot">Bot Opciones</option>
+              <option value="ia">Asistente IA</option>
+              <option value="human">Gestor de Ventas (Manual)</option>
+            </select>
+          </div>
+        </header>
+
+        <!-- Viewport Messages -->
+        <div class="messages-history">
+          <div 
+            class="message-bubble-wrapper" 
+            *ngFor="let msg of messages" 
+            [ngClass]="{
+              'msg-customer': msg.sender === 'customer',
+              'msg-bot': msg.sender === 'bot',
+              'msg-agent': msg.sender === 'agent'
+            }">
+            <div class="message-bubble">
+              <span class="msg-sender-label" *ngIf="msg.sender !== 'customer'">
+                {{ msg.sender === 'bot' ? '🤖 IA / Bot' : '🧑‍💼 Gestor de Ventas' }}
+              </span>
+              <p>{{ msg.message_text }}</p>
+              <span class="msg-time">{{ msg.created_at }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Viewport Input/Send Area -->
+        <footer class="viewport-footer">
+          <div class="warning-banner" *ngIf="selectedConversation.flow_state !== 'human'">
+            <span>ℹ️ El bot o la IA tienen el control. Escribir y enviar un mensaje cambiará automáticamente a "Gestor de Ventas".</span>
+          </div>
+          <div class="agent-banner" *ngIf="selectedConversation.flow_state === 'human'">
+            <span>🧑‍💻 Estás respondiendo como Gestor de Ventas. El Bot y la IA están desactivados en esta sesión.</span>
+          </div>
+
+          <form class="message-input-form" (ngSubmit)="sendMessage()">
+            <input 
+              type="text" 
+              name="newMessageText" 
+              [(ngModel)]="newMessageText" 
+              placeholder="Escribe una respuesta personalizada..." 
+              required 
+              [disabled]="isSending"
+              autocomplete="off">
+            <button type="submit" class="btn btn-primary send-btn" [disabled]="isSending || !newMessageText.trim()">
+              <span *ngIf="!isSending">✈️ Enviar</span>
+              <span *ngIf="isSending" class="spinner-btn"></span>
+            </button>
+          </form>
+        </footer>
+      </div>
+    </main>
+
+  </div>
+</div>

@@ -1,0 +1,51 @@
+<div class="app-container" *ngIf="authService.currentUser$ | async as user; else guestLayout">
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="pulse-indicator"></span>
+      <h2>Naldike <span>Store</span></h2>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span>Estadísticas</span>
+      </a>
+      <a routerLink="/chats" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💬</span>
+        <span>Auditoría de Chats</span>
+      </a>
+      <a routerLink="/configuration" routerLinkActive="active" class="nav-item" *ngIf="user.role === 'admin'">
+        <span class="nav-icon">⚙️</span>
+        <span>Configuración RAG</span>
+      </a>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="user-avatar">
+          {{ user.username[0].toUpperCase() }}
+        </div>
+        <div class="user-info">
+          <span class="username">{{ user.username }}</span>
+          <span class="role-badge">{{ user.role === 'admin' ? 'Administrador' : 'Agente' }}</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary logout-btn" (click)="logout()">
+        🚪 Cerrar Sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Viewport Area -->
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>
+
+<!-- Guest Layout Container (Full screen login) -->
+<ng-template #guestLayout>
+  <div class="guest-container">
+    <router-outlet></router-outlet>
+  </div>
+</ng-template>

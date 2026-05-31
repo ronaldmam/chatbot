@@ -1,0 +1,207 @@
+/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Dynamic HSL Palette - Premium Dark Mode with Glassmorphism and Neon accents */
+  --bg-primary: hsl(224, 25%, 12%);
+  --bg-secondary: hsl(222, 22%, 17%);
+  --bg-tertiary: hsl(223, 20%, 22%);
+  
+  --text-primary: hsl(210, 40%, 98%);
+  --text-secondary: hsl(215, 25%, 80%);
+  --text-muted: hsl(217, 15%, 60%);
+  
+  --primary: hsl(247, 85%, 66%);
+  --primary-hover: hsl(247, 85%, 60%);
+  --primary-glow: hsla(247, 85%, 66%, 0.35);
+  
+  --accent: hsl(322, 85%, 60%);
+  --accent-glow: hsla(322, 85%, 60%, 0.3);
+  
+  --success: hsl(142, 70%, 50%);
+  --warning: hsl(38, 92%, 50%);
+  --danger: hsl(354, 70%, 54%);
+  
+  --border: hsla(217, 15%, 60%, 0.15);
+  --border-active: hsla(247, 85%, 66%, 0.4);
+  
+  --glass-bg: rgba(30, 41, 59, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  
+  --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-family: 'Outfit', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Beautiful Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Standard Premium Glassmorphism Card Wrapper */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  transition: var(--transition);
+}
+.glass-card:hover {
+  border-color: var(--border-active);
+  transform: translateY(-2px);
+}
+
+/* Form Controls & Styling */
+.form-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+input, select, textarea {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  padding: 12px 16px;
+  transition: var(--transition);
+  outline: none;
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+/* Standard Premium Action Buttons */
+.btn {
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: var(--transition);
+  outline: none;
+  text-decoration: none;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), hsl(265, 80%, 60%));
+  color: white;
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--primary-glow);
+  filter: brightness(1.1);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+}
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  background: hsl(223, 20%, 28%);
+  border-color: var(--text-muted);
+}
+
+/* Badges / Micro status */
+.badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.badge-bot {
+  background: rgba(247, 85, 66, 0.15);
+  color: var(--accent);
+}
+.badge-ia {
+  background: rgba(247, 85, 247, 0.15);
+  color: hsl(270, 90%, 75%);
+}
+.badge-human {
+  background: rgba(142, 255, 142, 0.15);
+  color: var(--success);
+}
+.badge-active {
+  background: rgba(142, 255, 142, 0.15);
+  color: var(--success);
+}
+.badge-suspended {
+  background: rgba(255, 80, 80, 0.15);
+  color: var(--danger);
+}
+
+/* Micro-animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animated-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(247, 85, 66, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(247, 85, 66, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(247, 85, 66, 0); }
+}
+.pulse-indicator {
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}

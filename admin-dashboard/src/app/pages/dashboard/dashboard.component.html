@@ -1,0 +1,67 @@
+<div class="dashboard-wrapper animated-fade-in">
+  <header class="dashboard-header">
+    <h1>Panel de Control</h1>
+    <p class="subtitle">Métricas de Contención de IA y Automatización Multiagente</p>
+  </header>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <span class="spinner"></span>
+    <p>Cargando estadísticas de Naldike Store...</p>
+  </div>
+
+  <div class="dashboard-grid" *ngIf="!isLoading">
+    <!-- Total Conversations -->
+    <div class="glass-card stat-card border-primary">
+      <div class="stat-header">
+        <span class="stat-icon">💬</span>
+        <span class="stat-title">Conversaciones Totales</span>
+      </div>
+      <div class="stat-value">{{ stats.totalConversations }}</div>
+      <p class="stat-desc">Clientes atendidos por redes sociales</p>
+    </div>
+
+    <!-- Containment Rate -->
+    <div class="glass-card stat-card border-success">
+      <div class="stat-header">
+        <span class="stat-icon">🤖</span>
+        <span class="stat-title">Tasa de Contención IA</span>
+      </div>
+      <div class="stat-value success-text">{{ stats.containmentRate }}%</div>
+      <p class="stat-desc">Consultas resueltas sin derivación humana</p>
+    </div>
+
+    <!-- Handovers -->
+    <div class="glass-card stat-card border-warning">
+      <div class="stat-header">
+        <span class="stat-icon">🧑‍💻</span>
+        <span class="stat-title">Derivaciones a Humano</span>
+      </div>
+      <div class="stat-value warning-text">{{ stats.humanStateCount }}</div>
+      <p class="stat-desc">Casos complejos derivados a Wasapi</p>
+    </div>
+  </div>
+
+  <!-- Flow State breakdown charts -->
+  <div class="charts-section animated-fade-in" *ngIf="!isLoading">
+    <div class="glass-card chart-card">
+      <h3>Estado Actual de los Flujos de Conversación</h3>
+      <div class="progress-bar-container">
+        <div class="progress-segment bot-bg" [style.width.%]="(stats.botStateCount / stats.totalConversations) * 100">
+          <span class="segment-label">Bot: {{ stats.botStateCount }}</span>
+        </div>
+        <div class="progress-segment ia-bg" [style.width.%]="(stats.iaStateCount / stats.totalConversations) * 100">
+          <span class="segment-label">IA: {{ stats.iaStateCount }}</span>
+        </div>
+        <div class="progress-segment human-bg" [style.width.%]="(stats.humanStateCount / stats.totalConversations) * 100">
+          <span class="segment-label">Asesor: {{ stats.humanStateCount }}</span>
+        </div>
+      </div>
+      
+      <div class="legend">
+        <div class="legend-item"><span class="dot bot-bg"></span><span>Bot Guía Inicial</span></div>
+        <div class="legend-item"><span class="dot ia-bg"></span><span>Asistente IA (Gemini RAG)</span></div>
+        <div class="legend-item"><span class="dot human-bg"></span><span>Soporte Humano (Wasapi)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
