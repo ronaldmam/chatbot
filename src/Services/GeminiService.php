@@ -52,10 +52,7 @@ class GeminiService
         // A) If it is a Facebook Marketplace conversation, prioritize searching the related product reference
         if ($conv->isMarketplace === 1 && !empty($conv->marketplaceRef)) {
             $mktRef = $conv->marketplaceRef;
-            // Clean up marketplace reference text (remove price and codes)
-            $mktKeyword = preg_replace('/S\/\.?\s*\d+[\.,]/i', '', $mktRef);
-            $mktKeyword = preg_replace('/\b[A-Z]{2,4}\d{2,}\b/i', '', $mktKeyword); // strip item codes
-            $mktKeyword = trim(preg_replace('/\s+/', ' ', $mktKeyword));
+            $mktKeyword = \App\Services\WooCommerceService::cleanMarketplaceTitle($mktRef);
 
             if (!empty($mktKeyword)) {
                 $mktProducts = $this->wcService->searchProducts($mktKeyword);

@@ -142,6 +142,12 @@ class WebhookController
                 
                 // Get AI response immediately
                 $reply = $this->getAiReply($conv, $text);
+
+                if (stripos($reply, 'HUMAN_TRANSFER:') !== false) {
+                    $reply = trim(str_ireplace('HUMAN_TRANSFER:', '', $reply));
+                    $conv->flowState = 'human';
+                    $this->conversationRepository->save($conv);
+                }
             } else if ($cleanText === '1') {
                 $reply = $settings['option_1_response'] ?? '';
             } else if ($cleanText === '2') {
@@ -160,11 +166,17 @@ class WebhookController
             } else {
                 $reply = $this->getAiReply($conv, $text);
                 
-                // Graceful degradation: if Gemini API key quota is exhausted or errors out
-                if (strpos($reply, 'Lo siento, mi motor') === 0 || strpos($reply, 'Lo siento, experimenté') === 0) {
+                if (stripos($reply, 'HUMAN_TRANSFER:') !== false) {
+                    $reply = trim(str_ireplace('HUMAN_TRANSFER:', '', $reply));
                     $conv->flowState = 'human';
                     $this->conversationRepository->save($conv);
-                    $reply = "En este momento tenemos una alta demanda en nuestro canal inteligente. Para darte una atención inmediata y sin esperas, acabo de transferir esta conversación a uno de nuestros gestores de ventas. ¡Te responderemos de inmediato por aquí!";
+                } else {
+                    // Graceful degradation: if Gemini API key quota is exhausted or errors out
+                    if (strpos($reply, 'Lo siento, mi motor') === 0 || strpos($reply, 'Lo siento, experimenté') === 0) {
+                        $conv->flowState = 'human';
+                        $this->conversationRepository->save($conv);
+                        $reply = "En este momento tenemos una alta demanda en nuestro canal inteligente. Para darte una atención inmediata y sin esperas, acabo de transferir esta conversación a uno de nuestros gestores de ventas. ¡Te responderemos de inmediato por aquí!";
+                    }
                 }
             }
         } else {

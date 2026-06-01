@@ -19,6 +19,51 @@ class WooCommerceService
     }
 
     /**
+     * Clean and normalize Marketplace reference titles by stripping common Facebook prefixes,
+     * brand tags, item codes, and prices, while preserving secondary specifications (like pipe separator).
+     *
+     * @param string $ref Raw reference title
+     * @return string Cleaned product query string
+     */
+    public static function cleanMarketplaceTitle(string $ref): string
+    {
+        if (empty($ref)) {
+            return '';
+        }
+
+        $keyword = $ref;
+
+        // 1. Remove emojis and non-printable characters
+        $keyword = preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F900}-\x{1F9FF}\x{1F1E6}-\x{1F1FF}]/u', '', $keyword);
+
+        // 2. Remove common Facebook Messenger / Marketplace banner prefixes
+        $keyword = preg_replace('/Artículo:\s*/iu', '', $keyword);
+        $keyword = preg_replace('/Conversación con el título\s+/iu', '', $keyword);
+        $keyword = preg_replace('/Conversación sobre el artículo en venta\s+/iu', '', $keyword);
+        $keyword = preg_replace('/Conversación sobre\s+/iu', '', $keyword);
+        $keyword = preg_replace('/Artículo en venta:?\s+/iu', '', $keyword);
+        $keyword = preg_replace('/Conversación con\s+/iu', '', $keyword);
+
+        // 3. Remove brand name prefixes if present
+        $keyword = preg_replace('/^Naldike\s*·?\s*/iu', '', $keyword);
+        $keyword = preg_replace('/^Naldike\s*-?\s*/iu', '', $keyword);
+
+        // 4. Remove prices and their trailing hyphens/spaces (e.g. S/ 25 -, PEN25 -)
+        $keyword = preg_replace('/S\/\.?\s*\d+[\.,]?\d*\s*[-–—]?\s*/i', '', $keyword);
+        $keyword = preg_replace('/PEN\s*\d+[\.,]?\d*\s*[-–—]?\s*/i', '', $keyword);
+        $keyword = preg_replace('/\$\s*\d+[\.,]?\d*\s*[-–—]?\s*/i', '', $keyword);
+
+        // 5. Remove item codes (e.g. AA1234, BB-5678)
+        $keyword = preg_replace('/\b[A-Z]{2,4}-?\d{2,}\b/i', '', $keyword);
+
+        // 6. Clean up whitespace and trim
+        $keyword = trim(preg_replace('/\s+/', ' ', $keyword));
+
+        // Note: Do NOT split by pipe (|) as requested by the user, to preserve full title!
+        return $keyword;
+    }
+
+    /**
      * Look up inventory details or query store products
      * 
      * Uses WooCommerce API if credentials are present, else falls back to local HTML crawler scraper.

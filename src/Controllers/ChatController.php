@@ -400,32 +400,7 @@ class ChatController
             // ── Message 3: Product link from WooCommerce ──────────────────────────
             $productMsg = null;
             if (!empty($marketplaceRef)) {
-                // 1. Remove common Facebook Messenger / Marketplace banner prefixes
-                $keyword = preg_replace('/Conversación con el título\s+/iu', '', $marketplaceRef);
-                $keyword = preg_replace('/Conversación sobre el artículo en venta\s+/iu', '', $keyword);
-                $keyword = preg_replace('/Conversación sobre\s+/iu', '', $keyword);
-                $keyword = preg_replace('/Artículo en venta:?\s+/iu', '', $keyword);
-                $keyword = preg_replace('/Conversación con\s+/iu', '', $keyword);
-                
-                // 2. Remove brand name prefixes if present
-                $keyword = preg_replace('/^Naldike\s*·?\s*/iu', '', $keyword);
-                $keyword = preg_replace('/^Naldike\s*-?\s*/iu', '', $keyword);
-                
-                // 3. Remove prices (e.g. S/ 25, S/. 25, PEN 25, $25)
-                $keyword = preg_replace('/S\/\.?\s*\d+[\.,]?\d*/i', '', $keyword);
-                $keyword = preg_replace('/PEN\s*\d+[\.,]?\d*/i', '', $keyword);
-                $keyword = preg_replace('/\$\s*\d+[\.,]?\d*/i', '', $keyword);
-                
-                // 4. Remove item codes (e.g. AA1234, BB-5678)
-                $keyword = preg_replace('/\b[A-Z]{2,4}-?\d{2,}\b/i', '', $keyword);
-                
-                // 5. If there is a pipe (|), take the first part which is the primary product title
-                if (strpos($keyword, '|') !== false) {
-                    $parts = explode('|', $keyword);
-                    $keyword = trim($parts[0]);
-                }
-                
-                $keyword = trim(preg_replace('/\s+/', ' ', $keyword));
+                $keyword = \App\Services\WooCommerceService::cleanMarketplaceTitle($marketplaceRef);
 
                 if (!empty($keyword)) {
                     $wcService  = new \App\Services\WooCommerceService();
