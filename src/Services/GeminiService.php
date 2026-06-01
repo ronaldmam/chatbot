@@ -103,6 +103,14 @@ class GeminiService
         Responde siempre en español. Sé conversacional, persuasivo y servicial.
         IMPORTANTE: Como estás en un chat móvil (WhatsApp/Messenger), mantén tus respuestas muy cortas (máximo 2-3 párrafos breves o 4 oraciones en total) y haz preguntas para continuar la venta.";
 
+        // Append global AI instructions (configured in the Dashboard globally)
+        $settingsController = new \App\Controllers\SettingsController();
+        $settings = $settingsController->loadSettings();
+        $globalAiInstructions = $settings['global_ai_instructions'] ?? '';
+        if (!empty($globalAiInstructions)) {
+            $systemInstruction .= "\n\n⚠️ INSTRUCCIONES DE COMUNICACIÓN Y TONO GENERALES (APLICADAS GLOBALMENTE):\n" . $globalAiInstructions;
+        }
+
         // Append custom instructions for this specific conversation if provided
         if (!empty($conv->customInstructions)) {
             $systemInstruction .= "\n\n⚠️ INSTRUCCIONES ESPECÍFICAS PARA ESTA CONVERSACIÓN INDIVIDUAL:\n" . $conv->customInstructions;

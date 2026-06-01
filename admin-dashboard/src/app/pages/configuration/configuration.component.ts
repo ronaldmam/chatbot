@@ -25,6 +25,7 @@ export class ConfigurationComponent implements OnInit {
   welcomeMessage = '';
   option1Response = '';
   option2Response = '';
+  globalAiInstructions = '';
   isSavingBot = false;
 
   successMessage = '';
@@ -185,6 +186,7 @@ export class ConfigurationComponent implements OnInit {
         this.welcomeMessage = data.welcome_message;
         this.option1Response = data.option_1_response;
         this.option2Response = data.option_2_response;
+        this.globalAiInstructions = data.global_ai_instructions || '';
       },
       error: (err) => {
         console.error('Failed to load bot settings:', err);
@@ -207,7 +209,8 @@ export class ConfigurationComponent implements OnInit {
     const payload = {
       welcome_message: this.welcomeMessage,
       option_1_response: this.option1Response,
-      option_2_response: this.option2Response
+      option_2_response: this.option2Response,
+      global_ai_instructions: this.globalAiInstructions
     };
 
     this.ingestionService.saveBotSettings(payload).subscribe({

@@ -122,8 +122,21 @@
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary save-bot-btn" [disabled]="isSavingBot">
-          <span *ngIf="!isSavingBot">💾 Guardar Respuestas del Bot</span>
+        <!-- Global AI Instructions Context -->
+        <div class="form-group" style="margin-top: 15px; border-top: 1px dashed rgba(245, 158, 11, 0.2); padding-top: 15px;">
+          <label for="global-ai-instructions" style="color: #fbbf24;">Contexto e Instrucciones Generales para el Asistente de IA (Gemini)</label>
+          <textarea 
+            id="global-ai-instructions" 
+            name="globalAiInstructions" 
+            [(ngModel)]="globalAiInstructions" 
+            rows="5" 
+            placeholder="Define las pautas generales de comportamiento, tono y estilo de comunicación del Asistente IA (ej: 'Responde siempre con tono amigable y cercano, usa emojis y ofrece ayuda de manera proactiva')..." 
+            ></textarea>
+          <span class="input-tip">💡 Tip: Estas instrucciones se aplicarán a todas las conversaciones atendidas por la IA de forma general. Aquí puedes establecer el estilo de habla, el tono o reglas corporativas globales.</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary save-bot-btn" [disabled]="isSavingBot" style="margin-top: 15px;">
+          <span *ngIf="!isSavingBot">💾 Guardar Configuración</span>
           <span *ngIf="isSavingBot" class="spinner"></span>
         </button>
       </form>

@@ -65,7 +65,7 @@ export class IngestionService {
   /**
    * Save updated Options Bot greetings and responses templates
    */
-  public saveBotSettings(settings: { welcome_message: string, option_1_response: string, option_2_response: string }): Observable<any> {
+  public saveBotSettings(settings: { welcome_message: string, option_1_response: string, option_2_response: string, global_ai_instructions?: string }): Observable<any> {
     return this.http.post<any>(`${this.apiBase}/api/settings/bot`, settings);
   }
 }
