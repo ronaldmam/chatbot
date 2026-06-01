@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Naldike Chatbot Marketplace Automation
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      1.7
 // @description  Automate replies and manual dashboard sending for personal Facebook Marketplace & Messenger using Naldike Store local RAG Chatbot API.
 // @author       Antigravity AI
 // @match        https://*.facebook.com/messages/*
@@ -438,8 +438,14 @@
         // ── I. Call the API ────────────────────────────────────────────────────────
         const effectivePsid = facebookThreadId || customerName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
 
+        // ⚠️  ANTI-DUPLICATE GATE — set BEFORE the async call so that any subsequent
+        // interval tick that arrives while we wait for the HTTP response will see
+        // processedMsgMap already filled and autoOpenedKey already cleared, making
+        // re-entry impossible without a genuinely NEW message text.
         isProcessing = true;
-        autoOpenedKey = null; // consume the auto-open token — one reply per unread click
+        autoOpenedKey = null;                          // consume token NOW (synchronous)
+        processedMsgMap.set(convKey, messageText);     // pre-mark as processed NOW
+
         updateWidget('Llamando a API...', 'processing');
         addLog(`Nuevo msg de ${customerName}: "${messageText.substring(0, 30)}${messageText.length > 30 ? '...' : ''}"`);
 
@@ -462,12 +468,10 @@
                     if (data.status === 'automated_reply' && data.reply) {
                         addLog('API retornó respuesta automática. Enviando...');
                         updateWidget('Respondiendo...', 'processing');
-                        processedMsgMap.set(convKey, messageText);
                         sendReplyToChat(data.reply);
                     } else if (data.status === 'human_in_control') {
                         addLog('Gestor Humano en control. Bot silenciado.');
                         updateWidget('Gestor en control 👤', 'human');
-                        processedMsgMap.set(convKey, messageText);
                     } else {
                         addLog('API no generó respuesta automática.');
                         updateWidget('Escaneando chat...', 'scanning');
