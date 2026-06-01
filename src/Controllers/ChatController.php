@@ -191,6 +191,14 @@ class ChatController
     /**
      * Handle automated scraping requests from the Tampermonkey browser script.
      * Route: POST /api/automation/message
+     *
+     * NEW FLOW (v1.8):
+     * - If conversation is BRAND NEW (flowState='bot', no prior bot messages):
+     *   → Return status='new_conversation' so the JS script sends the 3 warm
+     *     greeting messages directly in Messenger and starts the 3-min follow-up timer.
+     *   → Switch flowState to 'ia' immediately so subsequent messages go to Gemini.
+     * - If conversation is ongoing (flowState='ia'): reply via Gemini AI.
+     * - If flowState='human': stay silent.
      */
     public function handleAutomationMessage(): void
     {
@@ -226,14 +234,46 @@ class ChatController
                 $this->chatRepository->save($conv);
             }
 
-            // 3. Save incoming message to thread history
+            // 3. Save incoming customer message to thread history
             $this->chatRepository->addMessage($conv->id, 'customer', $text);
 
             // 4. Flow state machine
-            $reply = '';
+            if ($conv->flowState === 'human') {
+                // Human agent in control — bot stays completely silent
+                Response::json(['status' => 'human_in_control', 'reply' => null]);
+                return;
+            }
+
             if ($conv->flowState === 'bot') {
+                // ── NEW CONVERSATION GREETING PATH ──────────────────────────────────
+                // Count how many bot/agent messages exist in this conv.
+                // If there are none, this is the very first interaction → send the warm
+                // greeting sequence (3 msgs) from the JS script, then switch to AI mode.
+                $priorBotMessages = array_filter($conv->messages ?? [], function($m) {
+                    return in_array($m->sender ?? '', ['bot', 'agent']);
+                });
+
+                if (empty($priorBotMessages)) {
+                    // Switch to AI mode right away so the next customer message hits Gemini
+                    $conv->flowState = 'ia';
+                    $this->chatRepository->save($conv);
+
+                    // Record a placeholder in history so we don't greet twice on retry
+                    $greetingLog = "[SALUDO_INICIAL] Bienvenida enviada por el script al cliente {$customerName}";
+                    $this->chatRepository->addMessage($conv->id, 'bot', $greetingLog);
+
+                    // Tell the JS to send the 3 warm greeting messages
+                    Response::json([
+                        'status'        => 'new_conversation',
+                        'customer_name' => $customerName,
+                        'marketplace_ref' => $conv->marketplaceRef ?? null
+                    ]);
+                    return;
+                }
+
+                // If we're still in 'bot' state but already have prior bot messages,
+                // fall through to the legacy options-menu logic below.
                 $cleanText = trim(strtolower($text));
-                
                 $settingsController = new SettingsController();
                 $settings = $settingsController->loadSettings();
 
@@ -241,34 +281,91 @@ class ChatController
                     $conv->flowState = 'ia';
                     $this->chatRepository->save($conv);
                     $reply = $this->getAiReply($conv, $text);
-                } else if ($cleanText === '1') {
+                } elseif ($cleanText === '1') {
                     $reply = $settings['option_1_response'] ?? '';
-                } else if ($cleanText === '2') {
+                } elseif ($cleanText === '2') {
                     $reply = $settings['option_2_response'] ?? '';
                 } else {
                     $reply = $settings['welcome_message'] ?? '';
                 }
-            } elseif ($conv->flowState === 'ia') {
-                $reply = $this->getAiReply($conv, $text);
-            } else {
-                // Human state: do not automate replies!
-                Response::json([
-                    'status' => 'human_in_control',
-                    'reply' => null
-                ]);
+
+                $this->chatRepository->addMessage($conv->id, 'bot', $reply);
+                Response::json(['status' => 'automated_reply', 'reply' => $reply]);
                 return;
             }
 
-            // 5. Save generated reply in thread history
+            // flowState === 'ia': normal AI reply via Gemini
+            $reply = $this->getAiReply($conv, $text);
             $this->chatRepository->addMessage($conv->id, 'bot', $reply);
 
             Response::json([
                 'status' => 'automated_reply',
-                'reply' => $reply
+                'reply'  => $reply
             ]);
         } catch (\Exception $e) {
             Response::json([
-                'error' => 'Internal Server Error',
+                'error'   => 'Internal Server Error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate and return a follow-up message after the 3-minute no-reply timer fires.
+     * The JS script calls this endpoint when the customer hasn't responded in 3 minutes
+     * after the initial greeting. Gemini generates a message with the product link,
+     * store address, and opening hours.
+     *
+     * Route: POST /api/automation/followup
+     */
+    public function handleAutomationFollowup(): void
+    {
+        try {
+            $body = Request::getBody();
+            $psid            = $body['psid'] ?? '';
+            $customerName    = $body['customer_name'] ?? 'Cliente Anónimo';
+            $marketplaceRef  = $body['marketplace_ref'] ?? null;
+
+            if (empty($psid)) {
+                Response::json(['error' => 'Bad Request', 'message' => 'psid is required.'], 400);
+                return;
+            }
+
+            // Locate the conversation
+            $customerRepo = new \App\Repositories\CustomerRepository();
+            $customer = $customerRepo->findOrCreate($psid, $customerName, 'messenger');
+            $conv = $this->chatRepository->findOrCreateActive($customer->id);
+
+            // Build a specific prompt that asks Gemini to compose the follow-up
+            $storeUrl     = defined('STORE_URL')     ? STORE_URL     : 'https://naldike.com';
+            $storeAddress = defined('STORE_ADDRESS') ? STORE_ADDRESS : 'Lima, Perú';
+            $storePhone   = defined('STORE_PHONE')   ? STORE_PHONE   : '939021800';
+            $storeSchedule = defined('STORE_SCHEDULE') ? STORE_SCHEDULE : 'Lunes a Sábado 9am–7pm, Domingos 10am–2pm';
+
+            $refPart = !empty($marketplaceRef)
+                ? "El cliente consultó por el siguiente artículo de Marketplace: '{$marketplaceRef}'. Incluye en tu mensaje el link directo a nuestra tienda online {$storeUrl} para que pueda verlo y comprarlo."
+                : "Incluye el link general de nuestra tienda online: {$storeUrl}";
+
+            $followUpPrompt = "El cliente lleva más de 3 minutos sin responder después de que le enviamos nuestra presentación inicial. "
+                . "Genera un mensaje amigable y conciso (máximo 3 oraciones) que incluya: "
+                . "(1) un recordatorio cálido de que estamos disponibles, "
+                . "(2) la dirección de nuestra tienda física: {$storeAddress}, "
+                . "(3) nuestro horario de atención: {$storeSchedule}, "
+                . "(4) {$refPart}. "
+                . "El mensaje debe motivar al cliente a visitarnos o comprar. Redáctalo en español, tono amigable y no invasivo.";
+
+            $reply = $this->getAiReply($conv, $followUpPrompt);
+
+            // Save the follow-up in conversation history
+            $this->chatRepository->addMessage($conv->id, 'bot', $reply);
+
+            Response::json([
+                'status' => 'followup_reply',
+                'reply'  => $reply
+            ]);
+        } catch (\Exception $e) {
+            Response::json([
+                'error'   => 'Internal Server Error',
                 'message' => $e->getMessage()
             ], 500);
         }

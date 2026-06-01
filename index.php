@@ -52,6 +52,7 @@ $router->post('/api/chats/{id}/message', [App\Controllers\ChatController::class,
 
 // Browser automation scraper route (Public locally)
 $router->post('/api/automation/message', [App\Controllers\ChatController::class, 'handleAutomationMessage']);
+$router->post('/api/automation/followup', [App\Controllers\ChatController::class, 'handleAutomationFollowup']);
 $router->get('/api/automation/pending', [App\Controllers\ChatController::class, 'getPendingAutomationMessages']);
 $router->post('/api/automation/delivered', [App\Controllers\ChatController::class, 'markAutomationMessagesDelivered']);
 

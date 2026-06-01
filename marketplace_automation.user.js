@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Naldike Chatbot Marketplace Automation
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.8
 // @description  Automate replies and manual dashboard sending for personal Facebook Marketplace & Messenger using Naldike Store local RAG Chatbot API.
 // @author       Antigravity AI
 // @match        https://*.facebook.com/messages/*
@@ -285,6 +285,7 @@
     let autoOpenedKey = null;          // Set by scanUnreadChats when it clicks an unread chat
     let isProcessing = false;
     let lastUnreadClickTime = 0;
+    const followUpTimerMap = new Map(); // Map<convKey, timeoutId> — 3-min no-reply timers
 
     // Periodic scanner to look for new incoming messages every 3 seconds
     setInterval(() => {
@@ -378,30 +379,25 @@
             return true;
         });
 
-        if (textNodes.length === 0) {
-            // No messages visible yet — pre-populate nothing, just wait
-            return;
-        }
+        if (textNodes.length === 0) return;
 
         const lastNode = textNodes[textNodes.length - 1];
         const messageText = lastNode.innerText.trim();
         if (!messageText) return;
 
-        // ── E. Dedup check — already processed this exact message for this conv? ──
         if (processedMsgMap.get(convKey) === messageText) {
-            return; // already handled, skip silently
+            return; 
         }
 
-        // ── F. If NOT auto-opened: silently record current message and STOP ────────
-        // This pre-populates the map so future scans of this chat don't fire the bot.
         if (!isAutoOpened) {
-            processedMsgMap.set(convKey, messageText);
-            return;
+            if (followUpTimerMap.has(convKey)) {
+                cancelFollowUpTimer(convKey);
+            } else {
+                processedMsgMap.set(convKey, messageText);
+                return;
+            }
         }
 
-        // ── G. Auto-opened path: detect if the last message is OUTGOING (bot/agent) ─
-        // If it's outgoing, the user already sent something — clear the auto-open flag
-        // and record the message, but don't send another reply.
         let checkEl = lastNode.parentElement;
         let isOutgoing = false;
         for (let i = 0; i < 12 && checkEl && checkEl !== document.body; i++) {
@@ -415,14 +411,13 @@
         }
 
         if (isOutgoing) {
-            // Already replied to this chat. Clear the auto-open key and record it.
+            cancelFollowUpTimer(convKey);
             processedMsgMap.set(convKey, messageText);
             autoOpenedKey = null;
             updateWidget('Escaneando chat...', 'scanning');
             return;
         }
 
-        // ── H. Detect Marketplace context ─────────────────────────────────────────
         let isMarketplace = 0;
         let marketplaceRef = null;
         const banners = mainRegion.querySelectorAll('div, span[role="heading"]');
@@ -435,16 +430,10 @@
             }
         }
 
-        // ── I. Call the API ────────────────────────────────────────────────────────
         const effectivePsid = facebookThreadId || customerName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-
-        // ⚠️  ANTI-DUPLICATE GATE — set BEFORE the async call so that any subsequent
-        // interval tick that arrives while we wait for the HTTP response will see
-        // processedMsgMap already filled and autoOpenedKey already cleared, making
-        // re-entry impossible without a genuinely NEW message text.
         isProcessing = true;
-        autoOpenedKey = null;                          // consume token NOW (synchronous)
-        processedMsgMap.set(convKey, messageText);     // pre-mark as processed NOW
+        autoOpenedKey = null;
+        processedMsgMap.set(convKey, messageText);
 
         updateWidget('Llamando a API...', 'processing');
         addLog(`Nuevo msg de ${customerName}: "${messageText.substring(0, 30)}${messageText.length > 30 ? '...' : ''}"`);
@@ -465,7 +454,13 @@
                     if (response.status !== 200) throw new Error('HTTP ' + response.status);
                     const data = JSON.parse(response.responseText);
 
-                    if (data.status === 'automated_reply' && data.reply) {
+                    if (data.status === 'new_conversation') {
+                        const name = data.customer_name || customerName;
+                        const mktRef = data.marketplace_ref;
+                        addLog(`[Saludo] Nueva conv con ${name}. Enviando bienvenida...`);
+                        updateWidget('Enviando bienvenida...', 'processing', name);
+                        sendWelcomeSequence(name, effectivePsid, customerName, mktRef, convKey);
+                    } else if (data.status === 'automated_reply' && data.reply) {
                         addLog('API retornó respuesta automática. Enviando...');
                         updateWidget('Respondiendo...', 'processing');
                         sendReplyToChat(data.reply);
@@ -487,6 +482,81 @@
                 addLog('Error de conexión. ¿PHP server activo en localhost:8000?');
                 updateWidget('Sin conexión a API 🔴', 'error');
                 isProcessing = false;
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // WELCOME SEQUENCE — sends the 3 warm greeting messages sequentially
+    // and then starts the 3-minute follow-up timer.
+    // ─────────────────────────────────────────────────────────────────────────
+    function sendWelcomeSequence(name, psid, customerName, mktRef, convKey) {
+        const DELAY = 900; // ms between messages
+
+        const msg1 = `Hola ${name} 😊`;
+        const msg2 = `Si tenemos el producto disponible 🛍️, tenemos tienda física y hacemos envíos`;
+        const msg3 = `Te envío más detalles 📝 para que puedas realizar la compra 💰`;
+
+        // Send messages one by one with delays
+        sendReplyToChat(msg1);
+        setTimeout(() => {
+            sendReplyToChat(msg2);
+            setTimeout(() => {
+                sendReplyToChat(msg3);
+                setTimeout(() => {
+                    // Start the 3-minute follow-up timer
+                    addLog(`[Timer] Iniciando timer 3 min para ${name}. Si no responde, envío info.`);
+                    updateWidget('Esperando respuesta (3 min)...', 'scanning', name);
+
+                    const timerId = setTimeout(() => {
+                        triggerFollowUp(psid, customerName, mktRef, convKey);
+                    }, 3 * 60 * 1000); // 3 minutes
+
+                    followUpTimerMap.set(convKey, timerId);
+                }, DELAY);
+            }, DELAY);
+        }, DELAY);
+    }
+
+    // Cancel a pending follow-up timer for a conversation
+    function cancelFollowUpTimer(convKey) {
+        if (followUpTimerMap.has(convKey)) {
+            clearTimeout(followUpTimerMap.get(convKey));
+            followUpTimerMap.delete(convKey);
+            addLog(`[Timer] Timer de seguimiento cancelado (cliente respondió).`);
+            updateWidget('Escaneando chat...', 'scanning');
+        }
+    }
+
+    // Called when the 3-minute timer fires: ask the backend to generate the follow-up
+    function triggerFollowUp(psid, customerName, mktRef, convKey) {
+        followUpTimerMap.delete(convKey);
+        addLog(`[Timer] 3 min sin respuesta de ${customerName}. Enviando seguimiento con info de tienda...`);
+        updateWidget('Enviando seguimiento...', 'processing', customerName);
+
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: 'http://localhost:8000/api/automation/followup',
+            data: JSON.stringify({
+                psid: psid,
+                customer_name: customerName,
+                marketplace_ref: mktRef
+            }),
+            headers: { 'Content-Type': 'application/json' },
+            onload: function(response) {
+                try {
+                    const data = JSON.parse(response.responseText);
+                    if (data.status === 'followup_reply' && data.reply) {
+                        sendReplyToChat(data.reply);
+                        addLog(`[Timer] Seguimiento enviado ✅`);
+                        updateWidget('Seguimiento enviado ✅', 'scanning');
+                    }
+                } catch(e) {
+                    addLog('[Timer] Error al enviar seguimiento: ' + e.message);
+                }
+            },
+            onerror: function() {
+                addLog('[Timer] Error de conexión al enviar seguimiento.');
             }
         });
     }
