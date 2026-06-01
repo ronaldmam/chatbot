@@ -120,6 +120,42 @@ class ChatController
     }
 
     /**
+     * Update custom instructions/context of a specific conversation.
+     * Route: PUT /api/chats/{id}/instructions
+     */
+    public function updateInstructions($id): void
+    {
+        try {
+            $conversationId = (int)$id;
+            $body = Request::getBody();
+            $customInstructions = $body['custom_instructions'] ?? null;
+
+            $conversation = $this->chatRepository->findById($conversationId);
+
+            if (!$conversation) {
+                Response::json([
+                    'error' => 'Not Found',
+                    'message' => "Conversation with ID $conversationId not found."
+                ], 404);
+                return;
+            }
+
+            $conversation->customInstructions = $customInstructions;
+            $this->chatRepository->save($conversation);
+
+            Response::json([
+                'message' => "Custom instructions updated successfully.",
+                'conversation' => $conversation->toArray()
+            ]);
+        } catch (\Exception $e) {
+            Response::json([
+                'error' => 'Internal Server Error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Send a manual response from the sales manager.
      * Route: POST /api/chats/{id}/message
      */
@@ -281,6 +317,12 @@ class ChatController
                     $conv->flowState = 'ia';
                     $this->chatRepository->save($conv);
                     $reply = $this->getAiReply($conv, $text);
+                    
+                    if (stripos($reply, 'HUMAN_TRANSFER:') !== false) {
+                        $reply = trim(str_ireplace('HUMAN_TRANSFER:', '', $reply));
+                        $conv->flowState = 'human';
+                        $this->chatRepository->save($conv);
+                    }
                 } elseif ($cleanText === '1') {
                     $reply = $settings['option_1_response'] ?? '';
                 } elseif ($cleanText === '2') {
@@ -296,6 +338,14 @@ class ChatController
 
             // flowState === 'ia': normal AI reply via Gemini
             $reply = $this->getAiReply($conv, $text);
+            
+            // Check if AI requested transfer to human manager due to lack of product/context info
+            if (stripos($reply, 'HUMAN_TRANSFER:') !== false) {
+                $reply = trim(str_ireplace('HUMAN_TRANSFER:', '', $reply));
+                $conv->flowState = 'human';
+                $this->chatRepository->save($conv);
+            }
+            
             $this->chatRepository->addMessage($conv->id, 'bot', $reply);
 
             Response::json([

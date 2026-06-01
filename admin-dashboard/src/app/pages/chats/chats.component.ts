@@ -127,6 +127,23 @@ export class ChatsComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Save custom instructions/context for the active conversation
+   */
+  saveInstructions(instructions: string): void {
+    if (!this.selectedConversation) return;
+
+    this.chatService.updateInstructions(this.selectedConversation.id, instructions).subscribe({
+      next: (res) => {
+        this.selectedConversation!.custom_instructions = instructions;
+        alert('Contexto e instrucciones guardadas exitosamente.');
+      },
+      error: (err) => {
+        alert('Error al guardar instrucciones: ' + (err.error?.message || 'Error de red.'));
+      }
+    });
+  }
+
+  /**
    * Load mock data for local testing
    */
   mockData(): void {

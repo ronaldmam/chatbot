@@ -48,6 +48,7 @@ $router->get('/api/chats', [App\Controllers\ChatController::class, 'getAll'], [A
 $router->get('/api/chats/stats', [App\Controllers\ChatController::class, 'stats'], [App\Core\Middleware\JwtAuthMiddleware::class]);
 $router->get('/api/chats/{id}', [App\Controllers\ChatController::class, 'getMessages'], [App\Core\Middleware\JwtAuthMiddleware::class]);
 $router->put('/api/chats/{id}/state', [App\Controllers\ChatController::class, 'updateState'], [App\Core\Middleware\JwtAuthMiddleware::class]);
+$router->put('/api/chats/{id}/instructions', [App\Controllers\ChatController::class, 'updateInstructions'], [App\Core\Middleware\JwtAuthMiddleware::class]);
 $router->post('/api/chats/{id}/message', [App\Controllers\ChatController::class, 'sendMessage'], [App\Core\Middleware\JwtAuthMiddleware::class]);
 
 // Browser automation scraper route (Public locally)

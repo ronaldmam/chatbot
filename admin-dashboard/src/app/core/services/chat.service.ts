@@ -20,6 +20,7 @@ export interface Conversation {
   unread_count?: number;
   is_marketplace?: number;
   marketplace_ref?: string;
+  custom_instructions?: string;
   created_at: string;
   messages?: ChatMessage[];
 }
@@ -52,6 +53,13 @@ export class ChatService {
    */
   public updateFlowState(conversationId: number, flowState: 'bot' | 'ia' | 'human'): Observable<any> {
     return this.http.put<any>(`${this.apiBase}/api/chats/${conversationId}/state`, { flow_state: flowState });
+  }
+
+  /**
+   * Update custom instructions/context for a specific conversation
+   */
+  public updateInstructions(conversationId: number, customInstructions: string): Observable<any> {
+    return this.http.put<any>(`${this.apiBase}/api/chats/${conversationId}/instructions`, { custom_instructions: customInstructions });
   }
 
   /**

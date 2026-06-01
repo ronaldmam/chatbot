@@ -37,6 +37,7 @@ class ChatConversationRepository
             $row['wasapi_ticket_id'],
             (int) ($row['is_marketplace'] ?? 0),
             $row['marketplace_ref'] ?? null,
+            $row['custom_instructions'] ?? null,
             $row['created_at'],
             $row['updated_at']
         );
@@ -66,22 +67,24 @@ class ChatConversationRepository
     public function save(ChatConversation $conversation): bool
     {
         if (isset($conversation->id) && $conversation->id > 0) {
-            $stmt = $this->db->prepare("UPDATE chat_conversations SET flow_state = ?, wasapi_ticket_id = ?, is_marketplace = ?, marketplace_ref = ? WHERE id = ?");
+            $stmt = $this->db->prepare("UPDATE chat_conversations SET flow_state = ?, wasapi_ticket_id = ?, is_marketplace = ?, marketplace_ref = ?, custom_instructions = ? WHERE id = ?");
             return $stmt->execute([
                 $conversation->flowState,
                 $conversation->wasapiTicketId,
                 $conversation->isMarketplace,
                 $conversation->marketplaceRef,
+                $conversation->customInstructions,
                 $conversation->id
             ]);
         } else {
-            $stmt = $this->db->prepare("INSERT INTO chat_conversations (customer_id, flow_state, wasapi_ticket_id, is_marketplace, marketplace_ref) VALUES (?, ?, ?, ?, ?)");
+            $stmt = $this->db->prepare("INSERT INTO chat_conversations (customer_id, flow_state, wasapi_ticket_id, is_marketplace, marketplace_ref, custom_instructions) VALUES (?, ?, ?, ?, ?, ?)");
             $result = $stmt->execute([
                 $conversation->customerId,
                 $conversation->flowState,
                 $conversation->wasapiTicketId,
                 $conversation->isMarketplace,
-                $conversation->marketplaceRef
+                $conversation->marketplaceRef,
+                $conversation->customInstructions
             ]);
             if ($result) {
                 $conversation->id = (int) $this->db->lastInsertId();
@@ -165,6 +168,7 @@ class ChatConversationRepository
             $row['wasapi_ticket_id'],
             (int) ($row['is_marketplace'] ?? 0),
             $row['marketplace_ref'] ?? null,
+            $row['custom_instructions'] ?? null,
             $row['created_at'],
             $row['updated_at']
         );
@@ -191,6 +195,7 @@ class ChatConversationRepository
                 cc.unread_count,
                 cc.is_marketplace,
                 cc.marketplace_ref,
+                cc.custom_instructions,
                 cc.created_at
             FROM chat_conversations cc
             JOIN customers c ON cc.customer_id = c.id

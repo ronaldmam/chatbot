@@ -14,6 +14,7 @@ class ChatConversation
     
     public int $isMarketplace; // 0 or 1
     public ?string $marketplaceRef;
+    public ?string $customInstructions;
     
     /**
      * @var ChatMessage[] Array of ChatMessage objects
@@ -27,6 +28,7 @@ class ChatConversation
         ?string $wasapiTicketId = null,
         int $isMarketplace = 0,
         ?string $marketplaceRef = null,
+        ?string $customInstructions = null,
         ?string $createdAt = null,
         ?string $updatedAt = null
     ) {
@@ -36,6 +38,7 @@ class ChatConversation
         $this->wasapiTicketId = $wasapiTicketId;
         $this->isMarketplace = $isMarketplace;
         $this->marketplaceRef = $marketplaceRef;
+        $this->customInstructions = $customInstructions;
         $this->createdAt = $createdAt;
         $this->updatedAt = $updatedAt;
     }
@@ -57,6 +60,7 @@ class ChatConversation
             'wasapi_ticket_id' => $this->wasapiTicketId,
             'is_marketplace' => $this->isMarketplace,
             'marketplace_ref' => $this->marketplaceRef,
+            'custom_instructions' => $this->customInstructions,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
             'messages' => $serializedMessages
