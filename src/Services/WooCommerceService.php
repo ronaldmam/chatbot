@@ -59,7 +59,6 @@ class WooCommerceService
         // 6. Clean up whitespace and trim
         $keyword = trim(preg_replace('/\s+/', ' ', $keyword));
 
-        // Note: Do NOT split by pipe (|) as requested by the user, to preserve full title!
         return $keyword;
     }
 
@@ -73,11 +72,41 @@ class WooCommerceService
      */
     public function searchProducts(string $keyword): string
     {
-        if (!empty($this->consumerKey) && !empty($this->consumerSecret)) {
-            return $this->searchProductsViaApi($keyword);
-        } else {
-            return $this->searchProductsViaScraper($keyword);
+        if (empty(trim($keyword))) {
+            return "No se encontraron productos coincidentes en el inventario.";
         }
+
+        $res = '';
+        if (!empty($this->consumerKey) && !empty($this->consumerSecret)) {
+            $res = $this->searchProductsViaApi($keyword);
+        } else {
+            $res = $this->searchProductsViaScraper($keyword);
+        }
+
+        // If the primary search yields no products, and there is a separator (like '|' or ' - '),
+        // do a fallback search with the portion before the separator!
+        if ((stripos($res, 'No se encontraron') !== false || stripos($res, 'No se pudo') !== false || empty(trim($res))) 
+            && (strpos($keyword, '|') !== false || strpos($keyword, ' - ') !== false)) {
+            
+            $fallbackKeyword = $keyword;
+            if (strpos($keyword, '|') !== false) {
+                $parts = explode('|', $keyword);
+                $fallbackKeyword = trim($parts[0]);
+            } else if (strpos($keyword, ' - ') !== false) {
+                $parts = explode(' - ', $keyword);
+                $fallbackKeyword = trim($parts[0]);
+            }
+
+            if (!empty($fallbackKeyword) && $fallbackKeyword !== $keyword) {
+                if (!empty($this->consumerKey) && !empty($this->consumerSecret)) {
+                    $res = $this->searchProductsViaApi($fallbackKeyword);
+                } else {
+                    $res = $this->searchProductsViaScraper($fallbackKeyword);
+                }
+            }
+        }
+
+        return $res;
     }
 
     /**
@@ -91,6 +120,32 @@ class WooCommerceService
     {
         if (empty(trim($keyword))) return null;
 
+        $product = $this->executeGetProductLink($keyword);
+
+        // Fallback if not found and contains pipe or hyphen
+        if (empty($product) && (strpos($keyword, '|') !== false || strpos($keyword, ' - ') !== false)) {
+            $fallbackKeyword = $keyword;
+            if (strpos($keyword, '|') !== false) {
+                $parts = explode('|', $keyword);
+                $fallbackKeyword = trim($parts[0]);
+            } else if (strpos($keyword, ' - ') !== false) {
+                $parts = explode(' - ', $keyword);
+                $fallbackKeyword = trim($parts[0]);
+            }
+
+            if (!empty($fallbackKeyword) && $fallbackKeyword !== $keyword) {
+                $product = $this->executeGetProductLink($fallbackKeyword);
+            }
+        }
+
+        return $product;
+    }
+
+    /**
+     * Internal helper to execute the WooCommerce API or Scraper getProductLink search
+     */
+    private function executeGetProductLink(string $keyword): ?array
+    {
         if (!empty($this->consumerKey) && !empty($this->consumerSecret)) {
             // WooCommerce REST API path
             $endpoint = rtrim($this->storeUrl, '/') . '/wp-json/wc/v3/products';
