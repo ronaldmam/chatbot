@@ -36,6 +36,80 @@ class WooCommerceService
     }
 
     /**
+     * Find the best matching product and return its structured data (name, link, price).
+     * Used by the follow-up timer to send the real product link to the customer.
+     *
+     * @param string $keyword Search term extracted from the Marketplace reference
+     * @return array|null ['name'=>string, 'link'=>string, 'price'=>string] or null if not found
+     */
+    public function getProductLink(string $keyword): ?array
+    {
+        if (empty(trim($keyword))) return null;
+
+        if (!empty($this->consumerKey) && !empty($this->consumerSecret)) {
+            // WooCommerce REST API path
+            $endpoint = rtrim($this->storeUrl, '/') . '/wp-json/wc/v3/products';
+            $url = $endpoint . '?search=' . urlencode($keyword) . '&per_page=1&status=publish';
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $this->consumerKey . ':' . $this->consumerSecret);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            if ($response) {
+                $products = json_decode($response, true);
+                if (!empty($products) && is_array($products) && !isset($products['code'])) {
+                    $p = $products[0];
+                    return [
+                        'name'  => $p['name'] ?? '',
+                        'link'  => $p['permalink'] ?? '',
+                        'price' => isset($p['price']) && $p['price'] !== '' ? 'S/. ' . $p['price'] : 'Consultar'
+                    ];
+                }
+            }
+        } else {
+            // Scraper fallback path
+            $url = rtrim($this->storeUrl, '/') . '/?s=' . urlencode($keyword) . '&post_type=product';
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; NaldikeBot/1.0)');
+            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+            $html = curl_exec($ch);
+            curl_close($ch);
+
+            if ($html) {
+                $dom = new \DOMDocument();
+                @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+                $xpath = new \DOMXPath($dom);
+
+                $titleNode = $xpath->query("//li[contains(@class,'product')]//h2[contains(@class,'woocommerce-loop-product__title')]")->item(0);
+                $priceNode = $xpath->query("//li[contains(@class,'product')]//span[contains(@class,'price')]")->item(0);
+                $linkNode  = $xpath->query("//li[contains(@class,'product')]//a[contains(@class,'woocommerce-LoopProduct-link')]")->item(0);
+
+                if ($linkNode) {
+                    return [
+                        'name'  => $titleNode ? trim($titleNode->textContent) : $keyword,
+                        'link'  => $linkNode->getAttribute('href'),
+                        'price' => $priceNode ? trim($priceNode->textContent) : 'Consultar'
+                    ];
+                }
+            }
+        }
+
+        return null; // product not found in any source
+    }
+
+    /**
      * Query WooCommerce REST API endpoints for product stock and price
      */
     private function searchProductsViaApi(string $keyword): string

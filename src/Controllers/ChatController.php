@@ -311,57 +311,78 @@ class ChatController
     }
 
     /**
-     * Generate and return a follow-up message after the 3-minute no-reply timer fires.
-     * The JS script calls this endpoint when the customer hasn't responded in 3 minutes
-     * after the initial greeting. Gemini generates a message with the product link,
-     * store address, and opening hours.
+     * Send the 3-minute no-reply follow-up messages.
+     * Returns 3 separate message strings for the JS to send sequentially:
+     *  1. address_msg  — store address (hard-coded from config)
+     *  2. schedule_msg — opening hours (hard-coded from config)
+     *  3. product_msg  — WooCommerce product link (or store URL as fallback)
      *
      * Route: POST /api/automation/followup
      */
     public function handleAutomationFollowup(): void
     {
         try {
-            $body = Request::getBody();
-            $psid            = $body['psid'] ?? '';
-            $customerName    = $body['customer_name'] ?? 'Cliente Anónimo';
-            $marketplaceRef  = $body['marketplace_ref'] ?? null;
+            $body           = Request::getBody();
+            $psid           = $body['psid'] ?? '';
+            $customerName   = $body['customer_name'] ?? 'Cliente Anónimo';
+            $marketplaceRef = $body['marketplace_ref'] ?? null;
 
             if (empty($psid)) {
                 Response::json(['error' => 'Bad Request', 'message' => 'psid is required.'], 400);
                 return;
             }
 
-            // Locate the conversation
+            // Locate the conversation and save followup as bot messages
             $customerRepo = new \App\Repositories\CustomerRepository();
-            $customer = $customerRepo->findOrCreate($psid, $customerName, 'messenger');
-            $conv = $this->chatRepository->findOrCreateActive($customer->id);
+            $customer     = $customerRepo->findOrCreate($psid, $customerName, 'messenger');
+            $conv         = $this->chatRepository->findOrCreateActive($customer->id);
 
-            // Build a specific prompt that asks Gemini to compose the follow-up
-            $storeUrl     = defined('STORE_URL')     ? STORE_URL     : 'https://naldike.com';
-            $storeAddress = defined('STORE_ADDRESS') ? STORE_ADDRESS : 'Lima, Perú';
-            $storePhone   = defined('STORE_PHONE')   ? STORE_PHONE   : '939021800';
-            $storeSchedule = defined('STORE_SCHEDULE') ? STORE_SCHEDULE : 'Lunes a Sábado 9am–7pm, Domingos 10am–2pm';
+            $storeUrl      = defined('STORE_URL')      ? STORE_URL      : 'https://naldike.com';
+            $storeAddress  = defined('STORE_ADDRESS')  ? STORE_ADDRESS  : 'Tacna, Perú';
+            $storeSchedule = defined('STORE_SCHEDULE') ? STORE_SCHEDULE : 'Lunes a Viernes 12pm–8pm, Sábados 10am–8pm';
 
-            $refPart = !empty($marketplaceRef)
-                ? "El cliente consultó por el siguiente artículo de Marketplace: '{$marketplaceRef}'. Incluye en tu mensaje el link directo a nuestra tienda online {$storeUrl} para que pueda verlo y comprarlo."
-                : "Incluye el link general de nuestra tienda online: {$storeUrl}";
+            // ── Message 1: Address ────────────────────────────────────────────────
+            $addressMsg = "📍 Estamos ubicados en 👉 {$storeAddress}";
 
-            $followUpPrompt = "El cliente lleva más de 3 minutos sin responder después de que le enviamos nuestra presentación inicial. "
-                . "Genera un mensaje amigable y conciso (máximo 3 oraciones) que incluya: "
-                . "(1) un recordatorio cálido de que estamos disponibles, "
-                . "(2) la dirección de nuestra tienda física: {$storeAddress}, "
-                . "(3) nuestro horario de atención: {$storeSchedule}, "
-                . "(4) {$refPart}. "
-                . "El mensaje debe motivar al cliente a visitarnos o comprar. Redáctalo en español, tono amigable y no invasivo.";
+            // ── Message 2: Schedule ───────────────────────────────────────────────
+            $scheduleMsg = "🕐 Horario de atención:\n{$storeSchedule}";
 
-            $reply = $this->getAiReply($conv, $followUpPrompt);
+            // ── Message 3: Product link from WooCommerce ──────────────────────────
+            $productMsg = null;
+            if (!empty($marketplaceRef)) {
+                // Extract clean search keyword from the Marketplace banner text
+                // (strip price references, article codes, etc.)
+                $keyword = preg_replace('/S\/\.?\s*\d+[\.,]?\d*/i', '', $marketplaceRef);
+                $keyword = preg_replace('/\b[A-Z]{2,4}\d{2,}\b/', '', $keyword); // strip item codes
+                $keyword = trim(preg_replace('/\s+/', ' ', $keyword));
 
-            // Save the follow-up in conversation history
-            $this->chatRepository->addMessage($conv->id, 'bot', $reply);
+                if (!empty($keyword)) {
+                    $wcService  = new \App\Services\WooCommerceService();
+                    $product    = $wcService->getProductLink($keyword);
+
+                    if ($product && !empty($product['link'])) {
+                        $productMsg = "🛒 Aquí te dejo el enlace del producto para que puedas verlo y comprarlo:\n"
+                            . "{$product['name']} — {$product['price']}\n"
+                            . "👉 {$product['link']}";
+                    }
+                }
+            }
+
+            // Fallback: send store URL if no specific product was found
+            if (empty($productMsg)) {
+                $productMsg = "🛍️ También puedes ver todo nuestro catálogo en línea:\n👉 {$storeUrl}";
+            }
+
+            // Save follow-up messages in conversation history
+            $this->chatRepository->addMessage($conv->id, 'bot', $addressMsg);
+            $this->chatRepository->addMessage($conv->id, 'bot', $scheduleMsg);
+            $this->chatRepository->addMessage($conv->id, 'bot', $productMsg);
 
             Response::json([
-                'status' => 'followup_reply',
-                'reply'  => $reply
+                'status'       => 'followup_reply',
+                'address_msg'  => $addressMsg,
+                'schedule_msg' => $scheduleMsg,
+                'product_msg'  => $productMsg
             ]);
         } catch (\Exception $e) {
             Response::json([

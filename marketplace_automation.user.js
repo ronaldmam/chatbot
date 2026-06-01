@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Naldike Chatbot Marketplace Automation
 // @namespace    http://tampermonkey.net/
-// @version      1.8
+// @version      1.9
 // @description  Automate replies and manual dashboard sending for personal Facebook Marketplace & Messenger using Naldike Store local RAG Chatbot API.
 // @author       Antigravity AI
 // @match        https://*.facebook.com/messages/*
@@ -528,10 +528,10 @@
         }
     }
 
-    // Called when the 3-minute timer fires: ask the backend to generate the follow-up
+    // Called when the 3-minute timer fires: sends address, schedule and product link as 3 separate messages
     function triggerFollowUp(psid, customerName, mktRef, convKey) {
         followUpTimerMap.delete(convKey);
-        addLog(`[Timer] 3 min sin respuesta de ${customerName}. Enviando seguimiento con info de tienda...`);
+        addLog(`[Timer] 3 min sin respuesta de ${customerName}. Enviando dirección, horario y link...`);
         updateWidget('Enviando seguimiento...', 'processing', customerName);
 
         GM_xmlhttpRequest({
@@ -546,10 +546,17 @@
             onload: function(response) {
                 try {
                     const data = JSON.parse(response.responseText);
-                    if (data.status === 'followup_reply' && data.reply) {
-                        sendReplyToChat(data.reply);
-                        addLog(`[Timer] Seguimiento enviado ✅`);
-                        updateWidget('Seguimiento enviado ✅', 'scanning');
+                    if (data.status === 'followup_reply') {
+                        const DELAY = 900;
+                        sendReplyToChat(data.address_msg);
+                        setTimeout(() => {
+                            sendReplyToChat(data.schedule_msg);
+                            setTimeout(() => {
+                                sendReplyToChat(data.product_msg);
+                                addLog(`[Timer] Seguimiento enviado ✅ (dirección + horario + link)`);
+                                updateWidget('Seguimiento enviado ✅', 'scanning');
+                            }, DELAY);
+                        }, DELAY);
                     }
                 } catch(e) {
                     addLog('[Timer] Error al enviar seguimiento: ' + e.message);
@@ -560,6 +567,7 @@
             }
         });
     }
+
 
     // Function to search for unread conversations in the sidebar and auto-click them
     function scanUnreadChats() {
