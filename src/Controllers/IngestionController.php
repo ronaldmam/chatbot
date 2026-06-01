@@ -120,9 +120,14 @@ class IngestionController
     {
         try {
             if (!isset($_FILES['pdf']) || $_FILES['pdf']['error'] !== UPLOAD_ERR_OK) {
+                $errCode = $_FILES['pdf']['error'] ?? 'desconocido';
+                $errMsg = 'Error al subir el archivo (Código de error PHP: ' . $errCode . ').';
+                if ($errCode === UPLOAD_ERR_INI_SIZE || $errCode === UPLOAD_ERR_FORM_SIZE) {
+                    $errMsg = 'El archivo PDF es demasiado grande. Supera el límite de subida permitido por PHP (upload_max_filesize).';
+                }
                 Response::json([
                     'error' => 'Bad Request',
-                    'message' => 'Please upload a valid PDF file.'
+                    'message' => $errMsg
                 ], 400);
                 return;
             }
@@ -133,15 +138,27 @@ class IngestionController
             if ($fileExtension !== 'pdf') {
                 Response::json([
                     'error' => 'Bad Request',
-                    'message' => 'Only PDF documents are supported.'
+                    'message' => 'Solo se admiten documentos en formato PDF.'
                 ], 400);
                 return;
             }
 
             // Use Smalot PdfParser to extract text contents
             $parser = new PdfParser();
-            $pdf = $parser->parseFile($file['tmp_name']);
-            $content = $pdf->getText();
+            try {
+                $pdf = $parser->parseFile($file['tmp_name']);
+                $content = $pdf->getText();
+            } catch (\Exception $e) {
+                $extraInfo = '';
+                if (!extension_loaded('zip')) {
+                    $extraInfo = ' [DETALLE: La extensión PHP "zip" no está habilitada en tu servidor XAMPP, lo cual es requerido por el motor de PDF para procesar el archivo. Por favor, abre tu archivo C:\\xampp\\php\\php.ini, busca ";extension=zip", quítale el punto y coma inicial, guarda el archivo y reinicia Apache en el panel de XAMPP].';
+                }
+                Response::json([
+                    'error' => 'Unprocessable Entity',
+                    'message' => 'Error al procesar el archivo PDF: ' . $e->getMessage() . $extraInfo
+                ], 422);
+                return;
+            }
 
             // Clean multiple spaces and whitespace
             $content = preg_replace('/\s+/', ' ', $content);
@@ -150,7 +167,7 @@ class IngestionController
             if (empty($content)) {
                 Response::json([
                     'error' => 'Unprocessable Entity',
-                    'message' => 'The uploaded PDF document does not contain any indexable plain text.'
+                    'message' => 'El documento PDF subido no contiene texto plano indexable.'
                 ], 422);
                 return;
             }

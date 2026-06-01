@@ -40,11 +40,11 @@ class GeminiService
         $ragContext = '';
         $productContext = '';
 
-        // 2. Query KnowledgeBase RAG for matches (PDF rules, URLs) based on user query
-        if (!empty($keywords)) {
-            $kbMatches = $this->kbRepository->search($keywords, 2);
-            foreach ($kbMatches as $match) {
-                $ragContext .= "Base de Conocimiento ({$match->title}):\n{$match->content}\n\n";
+        // 2. Pull all indexable guidelines and policies (PDFs, Webpages) from database knowledge base
+        $kbItems = $this->kbRepository->findAll();
+        foreach ($kbItems as $item) {
+            if ($item->type === 'pdf' || $item->type === 'url') {
+                $ragContext .= "Base de Conocimiento — Guía/Manual ({$item->title}):\n{$item->content}\n\n";
             }
         }
 

@@ -44,6 +44,8 @@ class KnowledgeBaseRepository
             ]);
             if ($result) {
                 $kb->id = (int) $this->db->lastInsertId();
+                $kb->createdAt = date('Y-m-d H:i:s');
+                $kb->updatedAt = date('Y-m-d H:i:s');
             }
             return $result;
         }
